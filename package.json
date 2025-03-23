@@ -1,0 +1,16 @@
+{
+  "name": "raycast-ts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "watch": "./node_modules/.bin/tsc --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.6.4",
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

@@ -22,7 +22,7 @@ class Vector2 {
     }
 }
 
-function fillCircle(ctx: CanvasRenderingContext2D, center: Vector2, radius: number, color: string) {
+function drawCircle(ctx: CanvasRenderingContext2D, center: Vector2, radius: number, color: string) {
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
@@ -72,8 +72,10 @@ function drawLine(ctx: CanvasRenderingContext2D, startPoint: Vector2, endPoint: 
 
     // Draw points
     var p1 = new Vector2(GRID_COLS / 2, GRID_ROWS / 2);
-    fillCircle(gameCtx, p1, 0.25, "#4400ff");
-
+    drawCircle(gameCtx, p1, 0.25, "#4400ff");
     var p2 = new Vector2(GRID_COLS / 4.45, GRID_ROWS / 4.25);
-    fillCircle(gameCtx, p2, 0.25, "#4400ff");
+    drawCircle(gameCtx, p2, 0.25, "#4400ff");
+
+    // Draw lines between points
+    drawLine(gameCtx, p1, p2, "#4400ff");
 })()
