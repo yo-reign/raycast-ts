@@ -100,62 +100,39 @@ function rayStep(p1: Vector2, p2: Vector2): Vector2 {
     // b = y1 - m*x1
     const yIntercept = p1.y - slope * p1.x;
 
-    //console.debug(`delta | x: ${delta.x}, y ${delta.y}\nm: ${m}`);
-
     let nextX: number, nextY: number;
-    if (delta.x < 0 && slope > 0) {
-        console.debug("Looking at Top-Left Sector");
-        const potentialY = slope * Math.floor(p1.x) + yIntercept;
-        if (potentialY > Math.floor(p1.y)) {
-            nextX = Math.floor(p1.x);
-            nextY = potentialY;
-        }
-        else {
-            nextX = (Math.floor(p1.y) - yIntercept) / slope;
-            nextY = Math.floor(p1.y);
-        }
-    } // Top right angle
-    else if (delta.x > 0 && slope < 0) {
-        console.debug("Looking at Top-Right Sector");
-        const potentialY = slope * Math.ceil(p1.x) + yIntercept;
-        if (potentialY > Math.floor(p1.y)) {
-            nextX = Math.ceil(p1.x);
-            nextY = potentialY;
-        }
-        else {
-            nextX = (Math.floor(p1.y) - yIntercept) / slope;
-            nextY = Math.floor(p1.y);
-        }
-    } // Bottom left angle
-    else if (delta.x < 0 && slope < 0) {
-        console.debug("Looking at Bottom-Left Sector");
-        const potentialY = slope * Math.floor(p1.x) + yIntercept;
-        if (potentialY < Math.ceil(p1.y)) {
-            nextX = Math.floor(p1.x);
-            nextY = potentialY;
-        }
-        else {
-            nextX = (Math.ceil(p1.y) - yIntercept) / slope;
-            nextY = Math.ceil(p1.y);
-        }
-        return new Vector2(nextX, nextY);
-    } // Bottom right angle
-    else if (delta.x > 0 && slope > 0) {
-        console.debug("Looking at Bottom-Right Sector");
-        const potentialY = slope * Math.ceil(p1.x) + yIntercept;
-        if (potentialY < Math.ceil(p1.y)) {
-            nextX = Math.ceil(p1.x);
-            nextY = potentialY;
-        }
-        else {
-            nextX = (Math.ceil(p1.y) - yIntercept) / slope;
-            nextY = Math.ceil(p1.y);
-        }
-    } else {
-        throw new Error("Invalid ray step!");
+    const potentialX = directionalRound(p2.x, delta.x);
+    const potentialY = slope * potentialX + yIntercept;
+
+    if (potentialY > Math.trunc(p2.y) && potentialY < Math.ceil(p2.y)) {
+        if (delta.x > 0) console.debug("Looking at right-wall");
+        else console.debug("Looking at left-wall");
+
+        nextY = potentialY;
+        nextX = potentialX;
+    }
+    else {
+        if (delta.y < 0) console.debug("Looking at ceiling");
+        else console.debug("Looking at floor");
+
+        nextY = directionalRound(p2.y, delta.y);
+        nextX = (nextY - yIntercept) / slope;
     }
 
     return new Vector2(nextX, nextY);
+}
+
+/**
+ * Rounds a number either towards positive or negative infinity, depending on the sign of the direction.
+ *
+ * @param x The number to round.
+ * @param dx The direction indicator. If positive, rounds towards positive infinity. If negative, rounds towards negative infinity.
+ * @returns The rounded number.
+ */
+function directionalRound(x: number, dx: number): number {
+    if (dx > 0) return Math.ceil(x);
+    if (dx < 0) return Math.trunc(x);
+    return x;
 }
 
 /**
@@ -228,6 +205,11 @@ function drawScene(ctx: CanvasRenderingContext2D, p2: Vector2 | undefined) {
         const p3 = rayStep(p1, p2);
         drawCircle(ctx, p3, 0.25, "#4400ff");
         drawLine(ctx, p2, p3, "#4400ff");
+
+        // TODO:
+        //const p4 = rayStep(p1, p3);
+        //drawCircle(ctx, p4, 0.05, "#44f0ff");
+        //drawLine(ctx, p3, p4, "#4400ff");
     }
 }
 
