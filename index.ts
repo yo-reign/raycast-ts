@@ -78,7 +78,11 @@ function getCanvasSize(ctx: CanvasRenderingContext2D): Vector2 {
     return new Vector2(ctx.canvas.width, ctx.canvas.height);
 }
 
-function rayStep(p1: Vector2, p2: Vector2): Vector2 {
+// TODO: Documentation
+// TODO: Clean up/refactor code
+function rayStep(p1: Vector2, p2: Vector2): Vector2 | null {
+    let nextPoint: Vector2 | null = null;
+
     // p1 = (x1, y1)
     // p2 = (x2, y2)
     //
@@ -89,10 +93,27 @@ function rayStep(p1: Vector2, p2: Vector2): Vector2 {
     // dx = x2 - x1
     const delta = p2.sub(p1);
 
+    // Nudge p1 slightly if it's already on a gridline to prevent returning the same point
+    const tolerance = 1e-6;
+    if (p1.x === Math.ceil(p1.x) && p1.x === Math.trunc(p1.x)) {
+        p1.x += delta.x > 0 ? tolerance : -tolerance;
+    }
+    if (p1.y === Math.ceil(p1.y) && p1.y === Math.trunc(p1.y)) {
+        p1.y += delta.y > 0 ? tolerance : -tolerance;
+    }
+
     // Handle vertical lines to avoid division by zero
-    // Ray is vertical, move directly up or down
     if (delta.x === 0) {
-        return new Vector2(p1.x, delta.y > 0 ? Math.ceil(p1.y) : Math.floor(p1.y));
+        // Ray is vertical, move directly up or down
+        nextPoint = new Vector2(p1.x, delta.y > 0 ? Math.ceil(p1.y) : Math.floor(p1.y));
+
+        // TODO: This is duplicated code which can be its own helper function
+        if (nextPoint.sub(p1).length() > p2.sub(p1).length()) {
+            console.debug("nextPoint is further away than p2");
+            return null;
+        }
+
+        return nextPoint;
     }
 
     // m = dy / dx
@@ -101,25 +122,33 @@ function rayStep(p1: Vector2, p2: Vector2): Vector2 {
     const yIntercept = p1.y - slope * p1.x;
 
     let nextX: number, nextY: number;
-    const potentialX = directionalRound(p2.x, delta.x);
+    const potentialX = directionalRound(p1.x, delta.x);
     const potentialY = slope * potentialX + yIntercept;
 
-    if (potentialY > Math.trunc(p2.y) && potentialY < Math.ceil(p2.y)) {
+    // If potentialY is: minY <= potentialY <= maxY, then we're looking at a wall
+    if (potentialY > Math.trunc(p1.y) && potentialY < Math.ceil(p1.y)) {
         if (delta.x > 0) console.debug("Looking at right-wall");
         else console.debug("Looking at left-wall");
 
         nextY = potentialY;
         nextX = potentialX;
     }
-    else {
+    else { // Else we're looking at a floor or ceiling, and mus re-calculate nextX and nextY
         if (delta.y < 0) console.debug("Looking at ceiling");
         else console.debug("Looking at floor");
 
-        nextY = directionalRound(p2.y, delta.y);
+        nextY = directionalRound(p1.y, delta.y);
         nextX = (nextY - yIntercept) / slope;
     }
 
-    return new Vector2(nextX, nextY);
+    nextPoint = new Vector2(nextX, nextY);
+    // TODO: This is duplicated code which can be its own helper function
+    if (nextPoint.sub(p1).length() > p2.sub(p1).length()) {
+        console.debug("nextPoint is further away than p2");
+        return null;
+    }
+
+    return nextPoint;
 }
 
 /**
@@ -161,22 +190,7 @@ function drawScene(ctx: CanvasRenderingContext2D, p2: Vector2 | undefined) {
         drawLine(ctx, new Vector2(0, y), new Vector2(GRID_COLS, y), "#404040");
     }
 
-    // TODO: Combine this with the map drawing loop for efficiency
-    //// Draw map
-    //for (let y = 0; y < GRID_ROWS; y++) {
-    //    for (let x = 0; x < GRID_COLS; x++) {
-    //        const cell = MAP[y][x];
-    //        if (cell === MapValues.Empty) {
-    //            continue;
-    //        }
-    //        else if (cell === MapValues.Wall) {
-    //            drawRect(ctx, new Vector2(x, y), new Vector2(x + 1, y + 1), "#ff0000");
-    //        }
-    //        else {
-    //            throw new Error("Invalid map value: " + cell);
-    //        }
-    //    }
-    //}
+    // TODO: Combine grid and map draw calls for efficiency
 
     // Draw map
     for (let y = 0; y < GRID_ROWS; y++) {
@@ -198,18 +212,24 @@ function drawScene(ctx: CanvasRenderingContext2D, p2: Vector2 | undefined) {
     let p1 = new Vector2(GRID_COLS / 2 + 0.5, GRID_ROWS / 2 + 0.5);
     drawCircle(ctx, p1, 0.25, "#4400ff");
 
+    // Continuously draw points up to p2 or a maximum number of steps
     if (p2 !== undefined) {
         drawCircle(ctx, p2, 0.25, "#4400ff");
         drawLine(ctx, p1, p2, "#4400ff");
 
-        const p3 = rayStep(p1, p2);
-        drawCircle(ctx, p3, 0.25, "#4400ff");
-        drawLine(ctx, p2, p3, "#4400ff");
-
-        // TODO:
-        //const p4 = rayStep(p1, p3);
-        //drawCircle(ctx, p4, 0.05, "#44f0ff");
-        //drawLine(ctx, p3, p4, "#4400ff");
+        let currentPoint = p1;
+        const maxSteps = 20;
+        for (let i = 0; i < maxSteps; i++) {
+            const nextPoint = rayStep(currentPoint, p2);
+            if (nextPoint === null) {
+                break;
+            }
+            drawCircle(ctx, nextPoint, 0.10, "#8400ff");
+            if (i > 0) {
+                drawLine(ctx, currentPoint, nextPoint, "#4400ff");
+            }
+            currentPoint = nextPoint;
+        }
     }
 }
 
