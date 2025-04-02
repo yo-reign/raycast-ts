@@ -41,6 +41,10 @@ class Vector2 {
         return new Vector2(this.x / b.x, this.y / b.y);
     }
 
+    lengthSquared(): number {
+        return this.x * this.x + this.y * this.y;
+    }
+
     length(): number {
         return Math.sqrt(this.x * this.x + this.y * this.y);
     }
@@ -79,37 +83,26 @@ function getCanvasSize(ctx: CanvasRenderingContext2D): Vector2 {
 }
 
 // TODO: Documentation
-// TODO: Clean up/refactor code
 function rayStep(p1: Vector2, p2: Vector2): Vector2 | null {
-    let nextPoint: Vector2 | null = null;
+    let nextPoint: Vector2 | null;
+    let startPoint = new Vector2(p1.x, p1.y);
+    let targetPoint = new Vector2(p2.x, p2.y);
+    const delta = targetPoint.sub(startPoint);
 
-    // p1 = (x1, y1)
-    // p2 = (x2, y2)
-    //
-    // | y1 = m*x1 + b
-    // | y2 = m*x2 + b
-
-    // dy = y2 - y1
-    // dx = x2 - x1
-    const delta = p2.sub(p1);
-
-    // Nudge p1 slightly if it's already on a gridline to prevent returning the same point
-    const tolerance = 1e-6;
-    if (p1.x === Math.ceil(p1.x) && p1.x === Math.trunc(p1.x)) {
-        p1.x += delta.x > 0 ? tolerance : -tolerance;
+    // Nudge startPoint slightly if it's already on a gridline to prevent returning the same point
+    const tolerance = 1e-9;
+    if (Math.ceil(startPoint.x) === Math.trunc(startPoint.x)) {
+        startPoint.x += delta.x > 0 ? tolerance : -tolerance;
     }
-    if (p1.y === Math.ceil(p1.y) && p1.y === Math.trunc(p1.y)) {
-        p1.y += delta.y > 0 ? tolerance : -tolerance;
+    if (Math.ceil(startPoint.y) === Math.trunc(startPoint.y)) {
+        startPoint.y += delta.y > 0 ? tolerance : -tolerance;
     }
 
-    // Handle vertical lines to avoid division by zero
-    if (delta.x === 0) {
-        // Ray is vertical, move directly up or down
-        nextPoint = new Vector2(p1.x, delta.y > 0 ? Math.ceil(p1.y) : Math.floor(p1.y));
-
-        // TODO: This is duplicated code which can be its own helper function
-        if (nextPoint.sub(p1).length() > p2.sub(p1).length()) {
-            console.debug("nextPoint is further away than p2");
+    // Ray is vertical, handle it to avoid division by zero issues
+    if (delta.x === 0) { // move directly up or down
+        nextPoint = new Vector2(startPoint.x, delta.y > 0 ? Math.ceil(startPoint.y) : Math.floor(startPoint.y));
+        if (nextPoint.sub(startPoint).lengthSquared() > delta.lengthSquared()) {
+            console.debug("nextPoint is further away than targetPoint");
             return null;
         }
 
@@ -117,34 +110,34 @@ function rayStep(p1: Vector2, p2: Vector2): Vector2 | null {
     }
 
     // m = dy / dx
-    const slope = delta.y / delta.x;
     // b = y1 - m*x1
-    const yIntercept = p1.y - slope * p1.x;
+    const slope = delta.y / delta.x;
+    const yIntercept = startPoint.y - slope * startPoint.x;
 
     let nextX: number, nextY: number;
-    const potentialX = directionalRound(p1.x, delta.x);
-    const potentialY = slope * potentialX + yIntercept;
+    const stepX = directionalRound(startPoint.x, delta.x);
+    const potentialY = slope * stepX + yIntercept; // Get Y from X
 
     // If potentialY is: minY <= potentialY <= maxY, then we're looking at a wall
-    if (potentialY > Math.trunc(p1.y) && potentialY < Math.ceil(p1.y)) {
+    if (potentialY > Math.trunc(startPoint.y) && potentialY < Math.ceil(startPoint.y)) {
         if (delta.x > 0) console.debug("Looking at right-wall");
         else console.debug("Looking at left-wall");
 
+        nextX = stepX;
         nextY = potentialY;
-        nextX = potentialX;
     }
     else { // Else we're looking at a floor or ceiling, and mus re-calculate nextX and nextY
         if (delta.y < 0) console.debug("Looking at ceiling");
         else console.debug("Looking at floor");
 
-        nextY = directionalRound(p1.y, delta.y);
-        nextX = (nextY - yIntercept) / slope;
+        const stepY = directionalRound(startPoint.y, delta.y);
+        nextY = stepY;
+        nextX = (stepY - yIntercept) / slope; // Get X from Y
     }
 
     nextPoint = new Vector2(nextX, nextY);
-    // TODO: This is duplicated code which can be its own helper function
-    if (nextPoint.sub(p1).length() > p2.sub(p1).length()) {
-        console.debug("nextPoint is further away than p2");
+    if (nextPoint.sub(startPoint).lengthSquared() > delta.lengthSquared()) {
+        console.debug("nextPoint is further away than targetPoint");
         return null;
     }
 
