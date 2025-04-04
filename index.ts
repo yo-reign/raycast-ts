@@ -4,7 +4,7 @@ const GRID_COLS = 10;
 const enum MapValues {
     Empty = 0,
     Wall = 1,
-}
+};
 const MAP = [
     [0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
     [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
@@ -16,7 +16,7 @@ const MAP = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-]
+];
 
 class Vector2 {
     constructor(public x: number, public y: number) { }
@@ -82,12 +82,24 @@ function getCanvasSize(ctx: CanvasRenderingContext2D): Vector2 {
     return new Vector2(ctx.canvas.width, ctx.canvas.height);
 }
 
-// TODO: Documentation
+
+/**
+ * Calculates the next grid intersection point for a ray segment.
+ * Finds the closest horizontal or vertical grid line intersection point
+ * along the ray from p1 towards p2.
+ *
+ * @param p1 The starting point of the ray segment.
+ * @param p2 The ending point (target) of the ray segment.
+ * @returns The closest grid intersection point (Vector2), or null if the
+ *          next intersection is beyond p2 or if p1/p2 are coincident.
+ */
 function rayStep(p1: Vector2, p2: Vector2): Vector2 | null {
-    let nextPoint: Vector2 | null;
+    // Avoid mutating original points
     let startPoint = new Vector2(p1.x, p1.y);
     let targetPoint = new Vector2(p2.x, p2.y);
+
     const delta = targetPoint.sub(startPoint);
+    let nextPoint: Vector2 | null; // Return value
 
     // Nudge startPoint slightly if it's already on a gridline to prevent returning the same point
     const tolerance = 1e-9;
@@ -105,7 +117,6 @@ function rayStep(p1: Vector2, p2: Vector2): Vector2 | null {
             console.debug("nextPoint is further away than targetPoint");
             return null;
         }
-
         return nextPoint;
     }
 
@@ -140,7 +151,6 @@ function rayStep(p1: Vector2, p2: Vector2): Vector2 | null {
         console.debug("nextPoint is further away than targetPoint");
         return null;
     }
-
     return nextPoint;
 }
 
